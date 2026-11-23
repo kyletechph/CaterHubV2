@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { VerifiedBadge } from '../shared/Reviews';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Arrow, Bookmark, Swap } from '../shared/Icons';
 import { COVERS, fromLabel, fromPrice, gate, perGuest, msg, ok, peso, shortDay, useLoad } from '../shared/lib';
@@ -36,6 +37,9 @@ export function matches(c, q, blocked) {
   let [a, b] = (q.budget || '').split('-').map((x) => (x === '' || x === undefined ? NaN : parseFloat(x)));
   return (
     (!q.name || c.business_name.toLowerCase().includes(q.name.toLowerCase())) &&
+    (!q.area ||
+      c.out_of_town ||
+      c.service_areas.some((x) => x.area_name.toLowerCase().includes(q.area.trim().toLowerCase()))) &&
     (!q.event || c.event_types.some((e) => e.toLowerCase().includes(q.event.trim().toLowerCase()))) &&
     (!n || (n >= c.min_guests && n <= c.max_guests)) &&
     (isNaN(a) || (mn !== null && mn >= a)) &&
@@ -47,7 +51,8 @@ export function List() {
   const [sp, setSp] = useSearchParams();
   const nav = useNavigate();
   const wide = () => window.matchMedia('(min-width: 721px)').matches,
-    [open, setOpen] = useState(wide);
+    [open, setOpen] = useState(wide),
+    [loc, setLoc] = useState(''); // location search is kept only on this screen, not in the URL
   const q = Object.fromEntries(sp);
   const [saved, toggleSaved] = useList('saved');
   const [cmp, toggleCmp] = useList('compare');
@@ -76,11 +81,12 @@ export function List() {
   if (g) return g;
   const all = s.data,
     blocked = new Set(bl.data || []);
+  const areas = [...new Map(all.flatMap((c) => c.service_areas.map((a) => a.area_name.trim().replace(/\s+/g, ' '))).map((n) => [n.toLowerCase(), n])).values()].sort();
   const events = [...new Set(all.flatMap((c) => c.event_types))].sort();
-  const activeFilters = ['event', 'budget', 'guests', 'date'].filter((k) => q[k]).length;
+  const activeFilters = ['event', 'budget', 'guests', 'date'].filter((k) => q[k]).length + (loc ? 1 : 0);
   const sort = q.sort || 'name';
   const rows = all
-    .filter((c) => matches(c, q, blocked))
+    .filter((c) => matches(c, { ...q, area: loc }, blocked))
     .sort((x, y) =>
       sort === 'name'
         ? x.business_name.localeCompare(y.business_name)
@@ -96,6 +102,7 @@ export function List() {
     const f = new FormData(e.target);
     const n = {};
     ['event', 'budget', 'guests', 'date'].forEach((k) => (n[k] = String(f.get(k) || '').trim()));
+    setLoc(String(f.get('area') || '').trim());
     if (q.name) n.name = q.name;
     if (q.sort) n.sort = q.sort;
     Object.keys(n).forEach((k) => !n[k] && delete n[k]);
@@ -104,6 +111,7 @@ export function List() {
   };
   const chips = [
     q.name && ['name', `"${q.name}"`],
+    loc && ['area', loc],
     q.event && ['event', q.event],
     q.guests && ['guests', `${q.guests} guests`],
     q.budget && ['budget', budgetLabel(q.budget)],
@@ -143,6 +151,15 @@ export function List() {
       {open && (
         <form className="filters bar" onSubmit={apply} key={sp.toString()} style={{ marginTop: 16 }}>
           <div className="field">
+            <label className="l">Location</label>
+            <input name="area" list="dir-areas" defaultValue={loc} placeholder="Any location" autoComplete="off" />
+            <datalist id="dir-areas">
+              {areas.map((a) => (
+                <option key={a} value={a} />
+              ))}
+            </datalist>
+          </div>
+          <div className="field">
             <label className="l">Event type</label>
             <input name="event" list="dir-events" defaultValue={q.event || ''} placeholder="Type or pick an event" autoComplete="off" />
             <datalist id="dir-events">
@@ -171,7 +188,7 @@ export function List() {
           </div>
           <div className="filters-actions">
             <button className="btn">Apply filters</button>
-            <button type="button" className="btn out" onClick={() => (!wide() && setOpen(false), nav('/caterers'))}>
+            <button type="button" className="btn out" onClick={() => (setLoc(''), !wide() && setOpen(false), nav('/caterers'))}>
               Reset
             </button>
           </div>
@@ -197,7 +214,7 @@ export function List() {
           {chips.length > 0 && (
             <div className="chips" style={{ marginBottom: 18 }}>
               {chips.map(([k, l]) => (
-                <button key={k} type="button" className="tag" onClick={() => set({ [k]: '' })}>
+                <button key={k} type="button" className="tag" onClick={() => (k === 'area' ? setLoc('') : set({ [k]: '' }))}>
                   {l} <span aria-hidden>×</span>
                 </button>
               ))}
@@ -207,7 +224,7 @@ export function List() {
             <div className="empty-state">
               <h3>No caterers found</h3>
               <p>Try a wider budget, fewer guests, a different event type, or a different business name.</p>
-              <button className="btn" onClick={() => nav('/caterers')}>
+              <button className="btn" onClick={() => (setLoc(''), nav('/caterers'))}>
                 Reset filters
               </button>
             </div>
@@ -246,6 +263,7 @@ export function List() {
                       <Link className="cat-link" to={'/caterer/' + c.caterer_id + carry(q)}>
                         {c.business_name}
                       </Link>
+                      {c.is_verified && <VerifiedBadge size={18} />}
                     </h3>
                     <div className="cc-loc">
                       {area}

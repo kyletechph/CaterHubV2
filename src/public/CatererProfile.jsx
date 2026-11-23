@@ -8,6 +8,7 @@ import { Empty, gate, guestsLabel, longDate, msg, ok, peso, priceLabel, today, u
 import { useAuth } from '../shared/AuthContext';
 import { COMPARE_MAX, useList } from '../shared/saved';
 import { sb } from '../shared/supabase';
+import { Reviews, VerifiedBadge } from '../shared/Reviews';
 // shows the whole picture: wide photos fill the tile, logos and tall pictures are shown uncropped
 // over a blurred copy of themselves, so there are no white bars
 function Tile({ t }) {
@@ -102,7 +103,10 @@ export function Profile() {
       </div>
       <div className="pf-head">
         <div>
-          <h1>{c.business_name}</h1>
+          <h1>
+            {c.business_name}
+            {c.is_verified && <VerifiedBadge size={30} />}
+          </h1>
           <p className="sub" style={{ marginTop: 10 }}>
             {c.tagline || 'Local catering for your celebrations.'}
           </p>
@@ -277,18 +281,10 @@ export function Profile() {
         </div>
       </div>
       <h2 className="sec-t" id="gallery" style={{ scrollMarginTop: 90 }}>
-        Reviews &amp; business details
+        Reviews &amp; event photos
       </h2>
-      <p className="mut small">Reviews, event photos, and verification details help you compare caterers with confidence.</p>
+      <Reviews c={c} />
       <div className="rv3">
-        <div className="card">
-          <h4>Genuine customer reviews</h4>
-          <span className="pill rust" style={{ marginBottom: 12 }}>
-            No reviews yet
-          </span>
-          <p>No customer reviews are available yet.</p>
-          <p>Ask for references or recent event examples before choosing your caterer.</p>
-        </div>
         <div className="card">
           <h4>Event photos</h4>
           <span className="pill sage" style={{ marginBottom: 12 }}>
@@ -299,14 +295,6 @@ export function Profile() {
           <Link className="lnk small" to={`/caterer/${c.caterer_id}/gallery`}>
             Open gallery →
           </Link>
-        </div>
-        <div className="card">
-          <h4>Business verification</h4>
-          <span className="pill rust" style={{ marginBottom: 12 }}>
-            Not provided
-          </span>
-          <p>Business registration and permit verification details are not available on this profile.</p>
-          <p>Ask the caterer for current documentation before finalizing arrangements.</p>
         </div>
       </div>
     </div>

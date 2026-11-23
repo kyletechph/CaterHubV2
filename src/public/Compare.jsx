@@ -194,11 +194,10 @@ export function Compare() {
               ))}
             </div>
             <div className="r">
-              <div>Reviews &amp; verification</div>
+              <div>Verification</div>
               {rows.map((c) => (
                 <div key={c.caterer_id}>
-                  No reviews yet
-                  <small>Business verification: not provided.</small>
+                  {c.is_verified ? 'Verified business' : 'Not verified yet'}
                 </div>
               ))}
             </div>

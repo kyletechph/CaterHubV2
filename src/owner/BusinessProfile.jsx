@@ -4,6 +4,7 @@ import { useAuth } from '../shared/AuthContext';
 import { Link } from 'react-router-dom';
 import { run, msg, upload } from '../shared/lib';
 import { sb } from '../shared/supabase';
+import { VerificationCard } from './Verification';
 const split = (t) => [...new Set(t.split(',').map((a) => a.trim()).filter(Boolean))];
 export function ProfileTab() {
   const { c, reload } = useOwner(),
@@ -410,6 +411,7 @@ export function ProfileTab() {
           </button>
         </div>
       )}
+      <VerificationCard c={c} reload={reload} />
     </>
   );
 }
