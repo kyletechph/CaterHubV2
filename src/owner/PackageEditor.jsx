@@ -222,7 +222,7 @@ export function PackageEditor() {
                 Menu
               </h3>
               <p className="tiny mut" style={{ marginBottom: 18 }}>
-                Add a category (Beef, Pork, Dessert...), set how many dishes the customer picks, then add the dishes you offer.
+                Add a category for each kind of food (Beef, Pork, Dessert...). Every category has its own “Customer picks”. Example: Beef 1, Pork 1, Dessert 2. Your package name goes in Package name above, not here.
               </p>
               {groups.length === 0 && <p className="small mut">No categories yet. Add one below.</p>}
               {groups.map((x, i) => {
@@ -236,7 +236,7 @@ export function PackageEditor() {
                         Customer picks{' '}
                         <select value={x.pick} onChange={(e) => edit(i, { pick: +e.target.value })} aria-label={x.category + ' picks'}>
                           <option value={0}>All / no limit</option>
-                          {[1, 2, 3, 4, 5].map((n) => (
+                          {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => (
                             <option key={n} value={n}>
                               {n}
                             </option>
@@ -253,6 +253,13 @@ export function PackageEditor() {
                           {d} ×
                         </button>
                       ))}
+                    </div>
+                    <div className="tiny" style={{ marginTop: 8, color: x.pick > x.items.length ? 'var(--rust)' : 'var(--mut)' }}>
+                      {x.items.length === 0
+                        ? 'No dishes yet. Add the dishes below.'
+                        : x.pick
+                          ? `Customer picks ${x.pick} of ${x.items.length} dish${x.items.length === 1 ? '' : 'es'}.${x.pick > x.items.length ? ' Add more dishes so the customer has a choice.' : ''}`
+                          : `Customer gets all ${x.items.length} dish${x.items.length === 1 ? '' : 'es'}.`}
                     </div>
                     <input
                       value={typed}
