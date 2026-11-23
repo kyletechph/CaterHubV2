@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Arrow, Bookmark, Swap } from '../shared/Icons';
-import { COVERS, DIETARY, fromLabel, fromPrice, gate, perGuest, msg, ok, peso, shortDay, useLoad } from '../shared/lib';
+import { COVERS, fromLabel, fromPrice, gate, perGuest, msg, ok, peso, shortDay, useLoad } from '../shared/lib';
 import { COMPARE_MAX, useList } from '../shared/saved';
 import { sb } from '../shared/supabase';
 export const BUDGETS = [
@@ -23,10 +23,10 @@ const media = (c, i) => {
   return { src: COVERS[i % COVERS.length], badge: null, blur: false };
 };
 const budgetLabel = (v) => (BUDGETS.find((b) => b[0] === v) || [])[1] || v;
-// keep the choices a visitor made (date, guests, dietary) when they open a profile
+// keep the choices a visitor made (date, guests) when they open a profile
 export const carry = (q) => {
   const p = new URLSearchParams();
-  ['date', 'guests', 'diet'].forEach((k) => q[k] && p.set(k, q[k]));
+  ['date', 'guests'].forEach((k) => q[k] && p.set(k, q[k]));
   return p.toString() ? '?' + p : '';
 };
 export function matches(c, q, blocked) {
@@ -36,9 +36,6 @@ export function matches(c, q, blocked) {
   let [a, b] = (q.budget || '').split('-').map((x) => (x === '' || x === undefined ? NaN : parseFloat(x)));
   return (
     (!q.name || c.business_name.toLowerCase().includes(q.name.toLowerCase())) &&
-    (!q.area ||
-      c.out_of_town ||
-      c.service_areas.some((x) => x.area_name.trim().toLowerCase() === q.area.toLowerCase())) &&
     (!q.event || c.event_types.some((e) => e.toLowerCase().includes(q.event.trim().toLowerCase()))) &&
     (!n || (n >= c.min_guests && n <= c.max_guests)) &&
     (isNaN(a) || (mn !== null && mn >= a)) &&
@@ -79,10 +76,8 @@ export function List() {
   if (g) return g;
   const all = s.data,
     blocked = new Set(bl.data || []);
-  const areas = [...new Map(all.flatMap((c) => c.service_areas.map((a) => a.area_name.trim().replace(/\s+/g, ' '))).map((n) => [n.toLowerCase(), n])).values()].sort();
   const events = [...new Set(all.flatMap((c) => c.event_types))].sort();
-  const diet = (q.diet || '').split(',').filter(Boolean);
-  const activeFilters = ['area', 'event', 'budget', 'guests', 'date', 'diet'].filter((k) => q[k]).length;
+  const activeFilters = ['event', 'budget', 'guests', 'date'].filter((k) => q[k]).length;
   const sort = q.sort || 'name';
   const rows = all
     .filter((c) => matches(c, q, blocked))
@@ -100,8 +95,7 @@ export function List() {
     e.preventDefault();
     const f = new FormData(e.target);
     const n = {};
-    ['area', 'event', 'budget', 'guests', 'date'].forEach((k) => (n[k] = String(f.get(k) || '').trim()));
-    n.diet = f.getAll('diet').join(',');
+    ['event', 'budget', 'guests', 'date'].forEach((k) => (n[k] = String(f.get(k) || '').trim()));
     if (q.name) n.name = q.name;
     if (q.sort) n.sort = q.sort;
     Object.keys(n).forEach((k) => !n[k] && delete n[k]);
@@ -110,12 +104,10 @@ export function List() {
   };
   const chips = [
     q.name && ['name', `"${q.name}"`],
-    q.area && ['area', q.area],
     q.event && ['event', q.event],
     q.guests && ['guests', `${q.guests} guests`],
     q.budget && ['budget', budgetLabel(q.budget)],
     q.date && ['date', shortDay(q.date)],
-    q.diet && ['diet', q.diet.split(',').join(', ')],
   ].filter(Boolean);
   const pickCompare = (id) => {
     if (!toggleCmp(id)) msg(`You can compare up to ${COMPARE_MAX} caterers. Remove one first.`, 1);
@@ -151,15 +143,6 @@ export function List() {
       {open && (
         <form className="filters bar" onSubmit={apply} key={sp.toString()} style={{ marginTop: 16 }}>
           <div className="field">
-            <label className="l">Location</label>
-            <select name="area" defaultValue={q.area || ''}>
-              <option value="">Any location</option>
-              {areas.map((a) => (
-                <option key={a}>{a}</option>
-              ))}
-            </select>
-          </div>
-          <div className="field">
             <label className="l">Event type</label>
             <input name="event" list="dir-events" defaultValue={q.event || ''} placeholder="Type or pick an event" autoComplete="off" />
             <datalist id="dir-events">
@@ -185,19 +168,6 @@ export function List() {
           <div className="field">
             <label className="l">Event date (optional)</label>
             <input type="date" name="date" defaultValue={q.date || ''} />
-          </div>
-          <div className="field">
-            <label className="l">Dietary preferences</label>
-            <details className="dd" open={diet.length > 0}>
-              <summary>{diet.length ? diet.join(', ') : 'Choose preferences'}</summary>
-              <div className="dd-body">
-                {DIETARY.map((d) => (
-                  <label className="check" key={d}>
-                    <input type="checkbox" name="diet" value={d} defaultChecked={diet.includes(d)} /> {d}
-                  </label>
-                ))}
-              </div>
-            </details>
           </div>
           <div className="filters-actions">
             <button className="btn">Apply filters</button>
