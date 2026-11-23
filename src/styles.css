@@ -557,3 +557,17 @@ button.tag { cursor: pointer; }
 }
 
 .two > *, .resp > *, .ed > *, .bp > *, .det > *, .inq > *, .pkd > *, .pf-grid > *, .dir-grid > *, .mbody > * { min-width: 0; }
+
+/* ---------- package editor: menu categories ---------- */
+.mcat { border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; margin-bottom: 14px; background: #fff; }
+.mcat-h { display: flex; align-items: center; gap: 14px; margin-bottom: 10px; }
+.mcat-h b { flex: 1; font-size: 15px; }
+.mcat-h select { width: auto; padding: 4px 28px 4px 8px; }
+.mcat-h button.x { background: none; border: 0; cursor: pointer; color: var(--mut); font-size: 18px; }
+
+/* ---------- package type picker ---------- */
+.kinds { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.kind { display: flex; flex-direction: column; gap: 4px; border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; cursor: pointer; background: #fff; }
+.kind input { position: absolute; opacity: 0; pointer-events: none; }
+.kind.on { border-color: var(--rust); background: var(--rust-t); }
+@media (max-width: 600px) { .kinds { grid-template-columns: 1fr; } }

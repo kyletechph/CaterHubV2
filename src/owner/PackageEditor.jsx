@@ -4,7 +4,17 @@ import { useOwner } from './OwnerLayout';
 import { useAuth } from '../shared/AuthContext';
 import { gate, msg, ok, run, upload, useLoad } from '../shared/lib';
 import { sb } from '../shared/supabase';
-export const CATS = ['Main dish', 'Side', 'Dessert', 'Drinks'];
+import { MENU_LIBRARY, PKG_TYPES } from './constants';
+export const CATS = Object.keys(MENU_LIBRARY);
+// group saved rows into [{ category, pick, items: [names] }]. "pick" = how many dishes the customer chooses (0 = all/no limit), stored in the quantity column
+const groupMenu = (rows = []) => {
+  const m = new Map();
+  rows.forEach((r) => {
+    if (!m.has(r.category)) m.set(r.category, { category: r.category, pick: r.quantity || 0, items: [] });
+    m.get(r.category).items.push(r.item_name);
+  });
+  return [...m.values()];
+};
 const BLANK = { name: '', description: '', price: '', price_range: '', min_guests: '', max_guests: '', inclusions: [], tables_chairs: 'Optional', is_customizable: true, is_active: true, package_menu_items: [], package_photos: [] };
 export function PackageEditor() {
   const { id } = useParams(),
@@ -16,12 +26,14 @@ export function PackageEditor() {
     if (isNew) return BLANK;
     return ok(await sb.from('catering_packages').select('*,package_menu_items(*),package_photos(*)').eq('package_id', id).eq('caterer_id', c.caterer_id).maybeSingle());
   }, [id]);
-  const [rows, setRows] = useState([]); // new menu rows
-  const [delItems, setDelItems] = useState([]);
+  const [menu, setMenu] = useState(null); // null = untouched; otherwise the edited menu groups
+  const [dish, setDish] = useState({}); // text typed per category
+  const [newCat, setNewCat] = useState('');
   const [files, setFiles] = useState([]);
   const [delPhotos, setDelPhotos] = useState([]);
   const [type, setType] = useState('Food');
   const [ptypeSel, setPtypeSel] = useState(null);
+  const [kindSel, setKindSel] = useState(null);
   const [fileKey, setFileKey] = useState(0);
   const previews = useMemo(() => files.map((f) => URL.createObjectURL(f)), [files]);
   const g = gate(s);
@@ -30,9 +42,24 @@ export function PackageEditor() {
   // pricing type: per guest, or one fixed price for a set number of guests (like a family combo)
   const ptype = ptypeSel ?? (p?.price_type === 'fixed' ? 'fixed' : 'per_guest'),
     fixed = ptype === 'fixed';
+  const kind = kindSel ?? (p?.package_type === 'food' ? 'food' : 'catering'),
+    food = kind === 'food';
   if (!p) return <div className="card"><h3 className="h3">Package not found</h3><Link className="btn" to="/owner/pk">Back to packages</Link></div>;
-  const pending = rows.filter((r) => r.item_name.trim()).length + delItems.length + files.length + delPhotos.length;
-  const setRow = (i, k, v) => setRows(rows.map((r, j) => (j === i ? { ...r, [k]: v } : r)));
+  const groups = menu ?? groupMenu(p.package_menu_items);
+  const pending = (menu ? 1 : 0) + files.length + delPhotos.length;
+  const edit = (i, patch) => setMenu(groups.map((x, j) => (j === i ? { ...x, ...patch } : x)));
+  const addDish = (i, name) => {
+    const n = name.trim().replace(/,$/, '').trim();
+    if (!n || groups[i].items.some((x) => x.toLowerCase() === n.toLowerCase())) return;
+    edit(i, { items: [...groups[i].items, n] });
+    setDish((d) => ({ ...d, [groups[i].category]: '' }));
+  };
+  const addCat = (name) => {
+    const n = name.trim();
+    if (!n || groups.some((x) => x.category.toLowerCase() === n.toLowerCase())) return;
+    setMenu([...groups, { category: n, pick: 1, items: [] }]);
+    setNewCat('');
+  };
   const toggle = (list, set, v) => set(list.includes(v) ? list.filter((x) => x !== v) : [...list, v]);
   const save = run(async (e) => {
     const f = e.target,
@@ -51,10 +78,11 @@ export function PackageEditor() {
       min_guests: mn,
       max_guests: mx,
       inclusions: g('inc').value.split('\n').map((x) => x.trim()).filter(Boolean),
-      tables_chairs: g('tc').value,
+      tables_chairs: food ? 'Optional' : g('tc').value,
       is_customizable: g('cust').checked,
     };
     // only sent when it matters, so saving per-guest packages works before the pricing SQL patch is run
+    if (food || p.package_type === 'food') body.package_type = kind;
     if (fixed) body.price_type = 'fixed';
     else if (p.price_type === 'fixed') body.price_type = 'per_guest';
     let pid = p.package_id;
@@ -65,17 +93,22 @@ export function PackageEditor() {
       delete body.price_range;
       r = await write(body);
     }
+    if (r.error && /package_type/i.test(r.error.message || '')) throw new Error('Food packages need a database update. Run caterhub_package_type_patch.sql in Supabase, then save again.');
     if (r.error && /price_type/i.test(r.error.message || '')) throw new Error('Fixed package pricing needs a database update. Run caterhub_package_pricing_patch.sql in Supabase, then save again.');
     if (r.error) throw r.error;
     if (isNew && !pid) pid = r.data.package_id;
-    if (delItems.length) {
-      const d = await sb.from('package_menu_items').delete().in('menu_item_id', delItems);
-      if (d.error) throw d.error;
-    }
-    const items = rows.filter((x) => x.item_name.trim()).map((x) => ({ package_id: pid, category: x.category, item_name: x.item_name.trim() }));
-    if (items.length) {
-      const d = await sb.from('package_menu_items').insert(items);
-      if (d.error) throw d.error;
+    if (menu) {
+      // add the new list first, then remove the old rows, so a failed save never leaves the menu empty
+      const oldIds = p.package_menu_items.map((m) => m.menu_item_id);
+      const items = menu.flatMap((x) => x.items.map((name) => ({ package_id: pid, category: x.category, item_name: name, quantity: x.pick || null })));
+      if (items.length) {
+        const d = await sb.from('package_menu_items').insert(items);
+        if (d.error) throw d.error;
+      }
+      if (oldIds.length) {
+        const d = await sb.from('package_menu_items').delete().in('menu_item_id', oldIds);
+        if (d.error) throw d.error;
+      }
     }
     if (delPhotos.length) {
       const d = await sb.from('package_photos').delete().in('photo_id', delPhotos);
@@ -86,8 +119,8 @@ export function PackageEditor() {
       const d = await sb.from('package_photos').insert({ package_id: pid, image_url: url, caption: type });
       if (d.error) throw d.error;
     }
-    setRows([]);
-    setDelItems([]);
+    setMenu(null);
+    setDish({});
     setFiles([]);
     setDelPhotos([]);
     setFileKey((k) => k + 1);
@@ -115,6 +148,18 @@ export function PackageEditor() {
               <h3 className="h3" style={{ marginBottom: 22 }}>
                 Package details
               </h3>
+              <div className="field">
+                <label className="l">Package type *</label>
+                <div className="kinds">
+                  {PKG_TYPES.map(([v, label, hint]) => (
+                    <label className={'kind' + (kind === v ? ' on' : '')} key={v}>
+                      <input type="radio" name="kind" checked={kind === v} onChange={() => setKindSel(v)} />
+                      <b>{label}</b>
+                      <span className="tiny mut">{hint}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
               <div className="field">
                 <label className="l">Package name *</label>
                 <input name="name" defaultValue={p.name} />
@@ -162,53 +207,105 @@ export function PackageEditor() {
               <label className="check field">
                 <input type="checkbox" name="cust" defaultChecked={p.is_customizable} /> Package can be customized
               </label>
-              <div className="field" style={{ marginBottom: 0 }}>
-                <label className="l">Tables and chairs</label>
-                <select name="tc" defaultValue={p.tables_chairs || 'Optional'}>
-                  <option>Optional</option>
-                  <option>Included</option>
-                </select>
-              </div>
+              {!food && (
+                <div className="field" style={{ marginBottom: 0 }}>
+                  <label className="l">Tables and chairs</label>
+                  <select name="tc" defaultValue={p.tables_chairs || 'Optional'}>
+                    <option>Optional</option>
+                    <option>Included</option>
+                  </select>
+                </div>
+              )}
             </div>
             <div className="card">
-              <h3 className="h3" style={{ marginBottom: 18 }}>
-                Sample menu
+              <h3 className="h3" style={{ marginBottom: 6 }}>
+                Menu
               </h3>
-              <div className="mtbl">
-                <div className="mh">
-                  <span>Dish name</span>
-                  <span>Category</span>
-                  <span />
-                </div>
-                {p.package_menu_items.map((m) => {
-                  const gone = delItems.includes(m.menu_item_id);
-                  return (
-                    <div className="mr" key={m.menu_item_id} style={gone ? { opacity: 0.45, textDecoration: 'line-through' } : null}>
-                      <span>{m.item_name}</span>
-                      <span className="mut">{m.category}</span>
-                      <button type="button" className="x" aria-label={gone ? 'Undo remove' : 'Remove'} onClick={() => toggle(delItems, setDelItems, m.menu_item_id)}>
-                        {gone ? '↺' : '×'}
+              <p className="tiny mut" style={{ marginBottom: 18 }}>
+                Add a category (Beef, Pork, Dessert...), set how many dishes the customer picks, then add the dishes you offer.
+              </p>
+              {groups.length === 0 && <p className="small mut">No categories yet. Add one below.</p>}
+              {groups.map((x, i) => {
+                const typed = dish[x.category] || '';
+                const sugg = (MENU_LIBRARY[x.category] || []).filter((d) => !x.items.some((y) => y.toLowerCase() === d.toLowerCase()));
+                return (
+                  <div className="mcat" key={x.category}>
+                    <div className="mcat-h">
+                      <b>{x.category}</b>
+                      <label className="small mut">
+                        Customer picks{' '}
+                        <select value={x.pick} onChange={(e) => edit(i, { pick: +e.target.value })} aria-label={x.category + ' picks'}>
+                          <option value={0}>All / no limit</option>
+                          {[1, 2, 3, 4, 5].map((n) => (
+                            <option key={n} value={n}>
+                              {n}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                      <button type="button" className="x" aria-label={'Remove ' + x.category} onClick={() => setMenu(groups.filter((_, j) => j !== i))}>
+                        ×
                       </button>
                     </div>
-                  );
-                })}
-                {rows.map((r, i) => (
-                  <div className="mr new" key={i}>
-                    <input value={r.item_name} onChange={(e) => setRow(i, 'item_name', e.target.value)} placeholder="Dish name" style={{ padding: '8px 10px' }} aria-label="Dish name" />
-                    <select value={r.category} onChange={(e) => setRow(i, 'category', e.target.value)} style={{ padding: '8px 30px 8px 10px' }} aria-label="Category">
-                      {CATS.map((x) => (
-                        <option key={x}>{x}</option>
+                    <div className="chips">
+                      {x.items.map((d) => (
+                        <button type="button" className="tag" key={d} onClick={() => edit(i, { items: x.items.filter((y) => y !== d) })} aria-label={'Remove ' + d}>
+                          {d} ×
+                        </button>
                       ))}
-                    </select>
-                    <button type="button" className="x" aria-label="Remove" onClick={() => setRows(rows.filter((_, j) => j !== i))}>
-                      ×
-                    </button>
+                    </div>
+                    <input
+                      value={typed}
+                      onChange={(e) => setDish({ ...dish, [x.category]: e.target.value })}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ',') {
+                          e.preventDefault();
+                          addDish(i, typed);
+                        }
+                      }}
+                      onBlur={() => addDish(i, typed)}
+                      placeholder={'Type a ' + x.category.toLowerCase() + ' dish and press Enter'}
+                      aria-label={'Add ' + x.category + ' dish'}
+                      style={{ marginTop: 10, padding: '8px 12px' }}
+                    />
+                    {sugg.length > 0 && (
+                      <div className="chips" style={{ marginTop: 10 }}>
+                        <span className="tiny mut">Suggestions:</span>
+                        {sugg.map((d) => (
+                          <button type="button" className="chip" key={d} onClick={() => addDish(i, d)}>
+                            + {d}
+                          </button>
+                        ))}
+                      </div>
+                    )}
                   </div>
+                );
+              })}
+              <div className="chips" style={{ marginTop: 6 }}>
+                {CATS.filter((c0) => !groups.some((x) => x.category === c0)).map((c0) => (
+                  <button type="button" className="chip" key={c0} onClick={() => addCat(c0)}>
+                    + {c0}
+                  </button>
                 ))}
               </div>
-              <button type="button" className="lnk small" onClick={() => setRows([...rows, { category: 'Main dish', item_name: '' }])}>
-                + Add menu item
-              </button>
+              <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+                <input
+                  value={newCat}
+                  onChange={(e) => setNewCat(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      addCat(newCat);
+                    }
+                  }}
+                  placeholder="Other category (e.g. Soup)"
+                  aria-label="New category"
+                  style={{ padding: '8px 12px' }}
+                />
+                <button type="button" className="btn" onClick={() => addCat(newCat)}>
+                  Add
+                </button>
+              </div>
             </div>
           </div>
           <div className="stack">
@@ -217,9 +314,9 @@ export function PackageEditor() {
                 Inclusions
               </h3>
               <label className="l">What's included</label>
-              <textarea name="inc" rows="5" defaultValue={(p.inclusions || []).join('\n')} placeholder={'Buffet setup\nServing staff\nDinnerware'} />
+              <textarea name="inc" rows="5" defaultValue={(p.inclusions || []).join('\n')} placeholder={food ? 'Rice\nDrinks\nDisposable plates and utensils' : 'Rice\nDrinks\nBuffet setup\nServing staff'} />
               <p className="tiny mut" style={{ marginTop: 6 }}>
-                One item per line.
+                Things every customer gets, one per line. Dishes go in the Menu section.
               </p>
             </div>
             <div className="card">

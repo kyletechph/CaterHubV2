@@ -6,6 +6,7 @@ import { sb } from '../shared/supabase';
 export function Packages() {
   const { c } = useOwner();
   const [tab, setTab] = useState('Active');
+  const [kind, setKind] = useState('all');
   const s = useLoad(
     async () =>
       ok(
@@ -22,7 +23,7 @@ export function Packages() {
   const all = s.data,
     act = all.filter((p) => p.is_active),
     off = all.filter((p) => !p.is_active),
-    rows = tab === 'Active' ? act : off;
+    rows = (tab === 'Active' ? act : off).filter((p) => kind === 'all' || (p.package_type || 'catering') === kind);
   const flip = (p) =>
     run(async () => {
       const r = await sb.from('catering_packages').update({ is_active: !p.is_active }).eq('package_id', p.package_id);
@@ -49,6 +50,13 @@ export function Packages() {
           Inactive {off.length}
         </button>
       </div>
+      <div className="chips" style={{ marginBottom: 16 }}>
+        {[['all', 'All'], ['catering', 'Catering'], ['food', 'Food']].map(([v, l]) => (
+          <button key={v} type="button" className={'chip' + (kind === v ? ' on' : '')} onClick={() => setKind(v)}>
+            {l}
+          </button>
+        ))}
+      </div>
       {rows.length === 0 ? (
         <div className="empty-state">
           <h3>{all.length ? `No ${tab.toLowerCase()} packages` : 'No packages yet'}</h3>
@@ -65,7 +73,8 @@ export function Packages() {
             <div className="pcard" key={p.package_id}>
               <div className="ph">{p.package_photos[0] ? <img src={p.package_photos[0].image_url} alt="" /> : 'No photo yet'}</div>
               <div className="bd">
-                <span className={'badge s-' + (p.is_active ? 'Active' : 'Inactive')}>{p.is_active ? 'Active' : 'Inactive'}</span>
+                <span className={'badge s-' + (p.is_active ? 'Active' : 'Inactive')}>{p.is_active ? 'Active' : 'Inactive'}</span>{' '}
+                <span className="tag">{p.package_type === 'food' ? 'Food' : 'Catering'}</span>
                 <h3>{p.name}</h3>
                 <div className="pr">{priceLabel(p)}</div>
                 <div className="small mut">

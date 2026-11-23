@@ -4,11 +4,6 @@ import { useAuth } from '../shared/AuthContext';
 import { Arrow } from '../shared/Icons';
 import { Empty, gate, guestsLabel, isFixed, ok, peso, totalFor, useLoad } from '../shared/lib';
 import { sb } from '../shared/supabase';
-const GROUPS = [
-  ['MAINS', ['Main dish', 'Main']],
-  ['SIDES', ['Side', 'Sides']],
-  ['DESSERT & DRINKS', ['Dessert', 'Drinks']],
-];
 export function Pkg() {
   const { id } = useParams(),
     { me } = useAuth();
@@ -33,7 +28,8 @@ export function Pkg() {
     guests = Math.max(0, n || 0),
     total = totalFor(p, guests),
     area = (c.service_areas || []).map((a) => a.area_name).join(', ') || 'Calbayog City',
-    extras = p.tables_chairs && p.tables_chairs !== 'Included';
+    food = p.package_type === 'food',
+    extras = !food && p.tables_chairs && p.tables_chairs !== 'Included';
   const inquire = `/inquire/${c.caterer_id}?pkg=${p.package_id}&guests=${isFixed(p) ? p.max_guests : guests || ''}`;
   return (
     <div className="wrap page">
@@ -55,32 +51,37 @@ export function Pkg() {
             A celebration, thoughtfully served.
           </h2>
           <p className="mut" style={{ maxWidth: 560 }}>
-            {p.description ? `${p.description} ` : ''}Discuss your preferred dishes, styling, and serving requirements with {c.business_name} before
+            {p.description ? `${p.description} ` : ''}Discuss your preferred dishes{food ? '' : ', styling, and serving requirements'} with {c.business_name} before
             finalizing your event.
           </p>
           <h2 className="h2" style={{ fontSize: 24, margin: '40px 0 14px' }}>
-            Sample menu
+            Menu
           </h2>
-          {p.package_menu_items.length === 0 && <p className="mut small">The caterer has not listed a sample menu yet.</p>}
-          {GROUPS.map(([label, cats]) => {
-            const items = p.package_menu_items.filter((m) => cats.includes(m.category));
-            return items.length ? (
-              <div className="mrow" key={label}>
-                <div className="label-s">{label}</div>
+          {p.package_menu_items.length === 0 && <p className="mut small">The caterer has not listed a menu yet.</p>}
+          {[...new Set(p.package_menu_items.map((m) => m.category))].map((cat) => {
+            const items = p.package_menu_items.filter((m) => m.category === cat),
+              pick = items[0].quantity;
+            return (
+              <div className="mrow" key={cat}>
+                <div className="label-s">
+                  {cat}
+                  {pick ? ` · choose ${pick}` : ''}
+                </div>
                 {items.map((m) => m.item_name).join(' · ')}
               </div>
-            ) : null;
+            );
           })}
           <h2 className="h2" style={{ fontSize: 24, margin: '40px 0 12px' }}>
             What's included
           </h2>
           <p className="mut small">{(p.inclusions || []).join('  ·  ') || 'Ask the caterer what is included.'}</p>
           <p className="mut small" style={{ marginTop: 4 }}>
-            Tables and chairs: {p.tables_chairs || 'ask the caterer'}. Menu changes may affect your final quotation.
+            {food ? '' : `Tables and chairs: ${p.tables_chairs || 'ask the caterer'}. `}Menu changes may affect your final quotation.
           </p>
         </div>
         <div>
           <div className="card" style={{ padding: 28 }}>
+            <span className="pill" style={{ marginRight: 6 }}>{food ? 'Food package' : 'Catering package'}</span>
             {p.is_customizable && <span className="pill rust">Customizable</span>}
             <div className="price-big">{peso(p.price)}</div>
             <div className="mut small">
@@ -91,7 +92,7 @@ export function Pkg() {
             <p className="mut small" style={{ margin: '16px 0 8px' }}>
               Service area: {area}
             </p>
-            <p className="mut small">Tables &amp; chairs: {p.tables_chairs || '—'}</p>
+            {!food && <p className="mut small">Tables &amp; chairs: {p.tables_chairs || '—'}</p>}
             <b className="small" style={{ display: 'block', margin: '20px 0 8px' }}>
               Estimate · not a final quote
             </b>

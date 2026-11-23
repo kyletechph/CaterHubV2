@@ -152,9 +152,14 @@ export function Profile() {
           {ps.length === 0 ? (
             <p className="mut">This caterer has not published any packages yet.</p>
           ) : (
-            <div className="pk-cards">
-              {ps.map((p) => (
-                <div className="pk-card" key={p.package_id}>
+            [['catering', 'Catering packages'], ['food', 'Food packages']].map(([kind, label]) => {
+              const list = ps.filter((p) => (p.package_type || 'catering') === kind);
+              return list.length ? (
+                <div key={kind}>
+                  {new Set(ps.map((p) => p.package_type || 'catering')).size > 1 && <h3 className="h3" style={{ margin: '22px 0 12px' }}>{label}</h3>}
+                  <div className="pk-cards">
+                    {list.map((p) => (
+                      <div className="pk-card" key={p.package_id}>
                   <h4>{p.name}</h4>
                   {p.description && <p>{p.description}</p>}
                   <div className="pr">{priceLabel(p)}</div>
@@ -167,8 +172,11 @@ export function Profile() {
                     </Link>
                   </div>
                 </div>
-              ))}
-            </div>
+                    ))}
+                  </div>
+                </div>
+              ) : null;
+            })
           )}
         </div>
         <aside className="card side-card">
