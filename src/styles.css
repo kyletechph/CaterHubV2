@@ -608,3 +608,15 @@ a.ph { display: grid; }
 .rev-strip { margin-bottom: 8px; }
 .rev-ph.strip { grid-template-columns: repeat(4, 1fr); max-width: 640px; margin-top: 10px; }
 .rev-ph.strip img { border-radius: 12px; }
+
+/* ---------- profile: calendar under the sidebar ---------- */
+.side-col { display: grid; gap: 18px; align-content: start; }
+.calcard.mini { padding: 20px; }
+.mini .cal-h { margin-bottom: 14px; }
+.mini .cal-h h3 { font-size: 18px; }
+.mini .cal-h .nv button { width: 34px; height: 30px; }
+.mini .cal7 { gap: 4px; }
+.mini .cal7 .wd { font-size: 10px; padding: 0 0 4px; overflow: hidden; }
+.mini .cd { min-height: 40px; padding: 6px 4px; font-size: 13px; align-items: center; justify-content: center; text-align: center; }
+.mini .cd small { display: none; }
+.mini .legend { gap: 12px; margin-top: 14px; }

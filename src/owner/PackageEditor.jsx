@@ -6,6 +6,20 @@ import { gate, msg, ok, run, upload, useLoad } from '../shared/lib';
 import { sb } from '../shared/supabase';
 import { MENU_LIBRARY, PKG_TYPES } from './constants';
 export const CATS = Object.keys(MENU_LIBRARY);
+const LEGACY = ['Food', 'Package', 'Setup'];
+function EventPick({ value, onChange, options = [] }) {
+  const list = value && !options.includes(value) ? [...options, value] : options;
+  return (
+    <select value={value} onChange={(e) => onChange(e.target.value)} aria-label="Photo event" style={{ flex: 1, minWidth: 0, padding: '6px 10px' }}>
+      <option value="">No specific event</option>
+      {list.map((x) => (
+        <option key={x} value={x}>
+          {x}
+        </option>
+      ))}
+    </select>
+  );
+}
 // group saved rows into [{ category, pick, items: [names] }]. "pick" = how many dishes the customer chooses (0 = all/no limit), stored in the quantity column
 const groupMenu = (rows = []) => {
   const m = new Map();
@@ -31,7 +45,8 @@ export function PackageEditor() {
   const [newCat, setNewCat] = useState('');
   const [files, setFiles] = useState([]);
   const [delPhotos, setDelPhotos] = useState([]);
-  const [type, setType] = useState('Food');
+  const [meta, setMeta] = useState([]); // event + caption for each new photo
+  const [edits, setEdits] = useState({}); // changed event/caption of saved photos, by photo_id
   const [ptypeSel, setPtypeSel] = useState(null);
   const [kindSel, setKindSel] = useState(null);
   const [fileKey, setFileKey] = useState(0);
@@ -46,7 +61,7 @@ export function PackageEditor() {
     food = kind === 'food';
   if (!p) return <div className="card"><h3 className="h3">Package not found</h3><Link className="btn" to="/owner/pk">Back to packages</Link></div>;
   const groups = menu ?? groupMenu(p.package_menu_items);
-  const pending = (menu ? 1 : 0) + files.length + delPhotos.length;
+  const pending = (menu ? 1 : 0) + files.length + delPhotos.length + Object.keys(edits).length;
   const edit = (i, patch) => setMenu(groups.map((x, j) => (j === i ? { ...x, ...patch } : x)));
   const addDish = (i, name) => {
     const n = name.trim().replace(/,$/, '').trim();
@@ -114,14 +129,26 @@ export function PackageEditor() {
       const d = await sb.from('package_photos').delete().in('photo_id', delPhotos);
       if (d.error) throw d.error;
     }
-    for (const file of files) {
+    const noEvents = (err) => /event_type/i.test(err.message || '') && new Error('Photo events need a database update. Run caterhub_photo_events_patch.sql in Supabase, then save again.');
+    for (const [pid0, ch] of Object.entries(edits)) {
+      if (delPhotos.includes(+pid0)) continue;
+      const body = { caption: ch.caption || null };
+      if (ch.event_type || p.package_photos.find((x) => x.photo_id === +pid0)?.event_type) body.event_type = ch.event_type || null;
+      const d = await sb.from('package_photos').update(body).eq('photo_id', +pid0);
+      if (d.error) throw noEvents(d.error) || d.error;
+    }
+    for (const [i, file] of files.entries()) {
       const url = await upload(file, me.id);
-      const d = await sb.from('package_photos').insert({ package_id: pid, image_url: url, caption: type });
-      if (d.error) throw d.error;
+      const row = { package_id: pid, image_url: url, caption: meta[i]?.caption?.trim() || null };
+      if (meta[i]?.event) row.event_type = meta[i].event;
+      const d = await sb.from('package_photos').insert(row);
+      if (d.error) throw noEvents(d.error) || d.error;
     }
     setMenu(null);
     setDish({});
     setFiles([]);
+    setMeta([]);
+    setEdits({});
     setDelPhotos([]);
     setFileKey((k) => k + 1);
     msg('Changes saved');
@@ -330,43 +357,64 @@ export function PackageEditor() {
               <h3 className="h3" style={{ marginBottom: 6 }}>
                 Photos
               </h3>
-              <p className="tiny mut">Food, package, and event setup photos.</p>
+              <p className="tiny mut">Food, package, and event photos. Choose the event each photo belongs to (like Birthday) and add a caption. Customers can filter the gallery by event.</p>
               {p.package_photos.map((h) => {
-                const gone = delPhotos.includes(h.photo_id);
+                const gone = delPhotos.includes(h.photo_id),
+                  cur = edits[h.photo_id] || { event_type: h.event_type || '', caption: LEGACY.includes(h.caption) ? '' : h.caption || '' };
+                const set = (patch) => setEdits({ ...edits, [h.photo_id]: { ...cur, ...patch } });
                 return (
                   <div className="photo-card" key={h.photo_id} style={gone ? { opacity: 0.4 } : null}>
                     <img src={h.image_url} alt="" />
-                    <div className="cap">
-                      <span>{h.caption} photo</span>
+                    <div className="cap" style={{ flexWrap: 'wrap' }}>
+                      <EventPick value={cur.event_type} onChange={(v) => set({ event_type: v })} options={c.event_types} />
                       <button type="button" className="lnk small" onClick={() => toggle(delPhotos, setDelPhotos, h.photo_id)}>
                         {gone ? 'Undo' : 'Remove'}
                       </button>
+                      <input value={cur.caption} onChange={(e) => set({ caption: e.target.value })} placeholder="Caption (optional)" maxLength={120} aria-label="Photo caption" style={{ flexBasis: '100%', marginTop: 8, padding: '8px 12px' }} />
                     </div>
                   </div>
                 );
               })}
-              {files.map((f, i) => (
-                <div className="photo-card" key={i}>
-                  <img src={previews[i]} alt="" />
-                  <div className="cap">
-                    <span>{type} photo · New</span>
-                    <button type="button" className="lnk small" onClick={() => setFiles(files.filter((_, j) => j !== i))}>
-                      Remove
-                    </button>
+              {files.map((f, i) => {
+                const m = meta[i] || { event: '', caption: '' };
+                const set = (patch) => setMeta(files.map((_, j) => (j === i ? { ...m, ...patch } : meta[j] || { event: '', caption: '' })));
+                return (
+                  <div className="photo-card" key={i}>
+                    <img src={previews[i]} alt="" />
+                    <div className="cap" style={{ flexWrap: 'wrap' }}>
+                      <EventPick value={m.event} onChange={(v) => set({ event: v })} options={c.event_types} />
+                      <button
+                        type="button"
+                        className="lnk small"
+                        onClick={() => {
+                          setFiles(files.filter((_, j) => j !== i));
+                          setMeta(meta.filter((_, j) => j !== i));
+                        }}
+                      >
+                        Remove
+                      </button>
+                      <input value={m.caption} onChange={(e) => set({ caption: e.target.value })} placeholder="Caption (optional)" maxLength={120} aria-label="Photo caption" style={{ flexBasis: '100%', marginTop: 8, padding: '8px 12px' }} />
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
               <div className="dropz">
                 <div className="plus">+ Upload photos</div>
                 <p className="tiny mut" style={{ margin: '4px 0 12px' }}>
                   JPG, PNG, or WebP · Max 2 MB each
                 </p>
-                <input key={fileKey} type="file" multiple accept="image/jpeg,image/png,image/webp" aria-label="Choose photos" onChange={(e) => setFiles([...files, ...Array.from(e.target.files)])} />
-                <select value={type} onChange={(e) => setType(e.target.value)} style={{ marginTop: 10 }} aria-label="Photo type">
-                  {['Food', 'Package', 'Setup'].map((x) => (
-                    <option key={x}>{x}</option>
-                  ))}
-                </select>
+                <input
+                  key={fileKey}
+                  type="file"
+                  multiple
+                  accept="image/jpeg,image/png,image/webp"
+                  aria-label="Choose photos"
+                  onChange={(e) => {
+                    const add = Array.from(e.target.files);
+                    setFiles([...files, ...add]);
+                    setMeta([...files.map((_, j) => meta[j] || { event: '', caption: '' }), ...add.map(() => ({ event: '', caption: '' }))]);
+                  }}
+                />
               </div>
               <p className="tiny mut" style={{ marginTop: 12 }}>
                 Photographs are visible on your public package page. Keep private business information out of uploaded images.

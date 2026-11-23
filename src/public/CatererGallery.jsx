@@ -1,24 +1,16 @@
 import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { AvailCalendar, BLOCKED, useAvail } from '../shared/AvailCalendar';
-import { Arrow } from '../shared/Icons';
-import { Empty, gate, longDate, ok, useLoad } from '../shared/lib';
+import { Empty, gate, ok, useLoad } from '../shared/lib';
 import { sb } from '../shared/supabase';
 export function Gallery() {
   const { id } = useParams();
-  const [date, setDate] = useState('');
-  const s = useLoad(
-    async () =>
-      ok(
-        await sb
-          .from('caterer_profiles')
-          .select('*,catering_packages(is_active,package_photos(image_url,caption))')
-          .eq('caterer_id', id)
-          .maybeSingle(),
-      ),
-    [id],
-  );
-  const av = useAvail(id);
+  const [ev, setEv] = useState(''); // '' = every event
+  const s = useLoad(async () => {
+    const q = (cols) => sb.from('caterer_profiles').select(`*,catering_packages(is_active,package_photos(${cols}))`).eq('caterer_id', id).maybeSingle();
+    let r = await q('image_url,caption,event_type');
+    if (r.error) r = await q('image_url,caption'); // photo events are not set up in the database yet
+    return ok(r);
+  }, [id]);
   const g = gate(s);
   if (g) return g;
   const c = s.data;
@@ -26,9 +18,11 @@ export function Gallery() {
   const photos = c.catering_packages
     .filter((p) => p.is_active)
     .flatMap((p) => p.package_photos)
-    .slice(0, 9);
-  const st = date ? av.data?.map?.[date] : null,
-    taken = BLOCKED.includes(st);
+    .slice(0, 60);
+  const events = [...new Set([...(c.event_types || []), ...photos.map((p) => p.event_type).filter(Boolean)])],
+    shown = ev ? photos.filter((p) => p.event_type === ev) : photos,
+    LEGACY = ['Food', 'Package', 'Setup'],
+    caption = (p) => (!p.caption ? '' : LEGACY.includes(p.caption) ? p.caption + ' photo' : p.caption);
   return (
     <div className="wrap page">
       <Link className="lnk small" to={'/caterer/' + id}>
@@ -44,52 +38,45 @@ export function Gallery() {
           <p>This caterer has not added event photos. Ask them for recent examples when you send an inquiry.</p>
         </div>
       ) : (
-        <div className="cards3" style={{ marginTop: 26 }}>
-          {photos.map((p, i) => (
-            <div className="cv" key={i}>
-              <div className="ph" style={{ aspectRatio: '1.5' }}>
-                <img src={p.image_url} alt="" />
-              </div>
-              <p className="small mut" style={{ marginTop: 12 }}>
-                {p.caption} photo
-              </p>
+        <>
+          {events.length > 0 && (
+            <div className="chips" style={{ marginTop: 22 }} role="group" aria-label="Filter photos by event">
+              <button type="button" className={'chip' + (ev === '' ? ' on' : '')} onClick={() => setEv('')}>
+                All events ({photos.length})
+              </button>
+              {events.map((e) => (
+                <button type="button" key={e} className={'chip' + (ev === e ? ' on' : '')} onClick={() => setEv(e)}>
+                  {e} ({photos.filter((p) => p.event_type === e).length})
+                </button>
+              ))}
             </div>
-          ))}
-        </div>
-      )}
-      <div className="two" style={{ gridTemplateColumns: 'minmax(0, 1.6fr) minmax(0, 1fr)', marginTop: 34 }}>
-        <div className="card calcard">
-          {av.data ? <AvailCalendar avail={av.data} value={date} onPick={setDate} /> : <p className="mut">Loading…</p>}
-        </div>
-        <div className="card">
-          <h3 className="h3" style={{ marginBottom: 14 }}>
-            {date ? longDate(date) : 'Pick a date'}
-          </h3>
-          {date ? (
-            <>
-              <p style={{ fontWeight: 600, color: taken ? 'var(--rust)' : 'var(--sage-ink)' }}>
-                {taken ? st : 'Available for inquiry'}
-              </p>
-              <p className="mut small">
-                {taken
-                  ? 'Already Reserved or Unavailable? Discuss an alternative date directly with the caterer.'
-                  : 'Your date is not reserved by viewing availability or sending an inquiry.'}
-              </p>
-              {!taken && (
-                <Link className="btn block" to={`/inquire/${id}?date=${date}`}>
-                  Ask about this date <Arrow />
-                </Link>
-              )}
-            </>
-          ) : (
-            <p className="mut small">Select a date on the calendar to see its status.</p>
           )}
-        </div>
-      </div>
-      <p className="tiny mut" style={{ marginTop: 26 }}>
-        Only availability is public. Customer names, inquiry details, deposits, and private calendar notes are never shown
-        here.
-      </p>
+          {shown.length === 0 ? (
+            <div className="empty-state" style={{ marginTop: 22 }}>
+              <h3>No {ev.toLowerCase()} photos yet</h3>
+              <p>This caterer has not added {ev.toLowerCase()} photos. Ask them for recent examples when you send an inquiry.</p>
+            </div>
+          ) : (
+            <div className="cards3" style={{ marginTop: 22 }}>
+              {shown.map((p, i) => (
+                <div className="cv" key={i}>
+                  <div className="ph" style={{ aspectRatio: '1.5' }}>
+                    <img src={p.image_url} alt={caption(p) || p.event_type || ''} />
+                  </div>
+                  <div style={{ marginTop: 12 }}>
+                    {p.event_type && <span className="tag">{p.event_type}</span>}
+                    {caption(p) && (
+                      <p className="small mut" style={{ margin: p.event_type ? '8px 0 0' : 0 }}>
+                        {caption(p)}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </>
+      )}
     </div>
   );
 }

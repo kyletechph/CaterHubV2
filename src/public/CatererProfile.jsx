@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { carry } from './CatererList';
+import { AvailCalendar, BLOCKED, useAvail } from '../shared/AvailCalendar';
 import { copyLink, mapUrl } from './mapLinks';
 import { Arrow, Bookmark } from '../shared/Icons';
-import { Empty, gate, guestsLabel, msg, ok, peso, priceLabel, useLoad } from '../shared/lib';
+import { Empty, gate, guestsLabel, longDate, msg, ok, peso, priceLabel, useLoad } from '../shared/lib';
 import { useAuth } from '../shared/AuthContext';
 import { COMPARE_MAX, useList } from '../shared/saved';
 import { sb } from '../shared/supabase';
@@ -40,6 +41,7 @@ export function Profile() {
   const q = Object.fromEntries(sp);
   const [cmp, toggleCmp] = useList('compare');
   const [tab, setTab] = useState('overview');
+  const [date, setDate] = useState(q.date || '');
   const s = useLoad(
     async () =>
       ok(
@@ -51,6 +53,7 @@ export function Profile() {
       ),
     [id],
   );
+  const av = useAvail(id);
   const g = gate(s);
   if (g) return g;
   const c = s.data;
@@ -68,10 +71,12 @@ export function Profile() {
     photos = ps.flatMap((p) => p.package_photos.map((x) => x.image_url)),
     tiles = [c.cover_image && { src: c.cover_image }, c.logo && { src: c.logo, logo: true }, ...photos.map((src) => ({ src }))].filter(Boolean).slice(0, 2),
     inCmp = cmp.includes(c.caterer_id),
+    st = date ? av.data?.map?.[date] : null,
+    taken = BLOCKED.includes(st),
     map = mapUrl(c),
     area = c.service_areas.map((a) => a.area_name).join(', ') || 'Calbayog City',
     custom = ps.some((p) => p.is_customizable),
-    inquire = `/inquire/${c.caterer_id}${carry(q)}`;
+    inquire = `/inquire/${c.caterer_id}${carry({ ...q, date })}`;
   const goto = (t) => {
     setTab(t);
     document.getElementById(t)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -192,50 +197,74 @@ export function Profile() {
             })
           )}
         </div>
-        <aside className="card side-card">
-          <h4>Get to know your caterer</h4>
-          <div className="kv-l" style={{ marginTop: 0 }}>
-            Contact
-          </div>
-          <div>{c.contact_number}</div>
-          {c.email && <div>{c.email}</div>}
-          {c.address && (
-            <>
-              <div className="kv-l">Address</div>
-              <div>{c.address}</div>
-              {map && (
-                <div className="small" style={{ marginTop: 4 }}>
-                  <a href={map} target="_blank" rel="noopener noreferrer">
-                    Open location in maps
-                  </a>{' '}
-                  ·{' '}
-                  <button type="button" className="lnk small" onClick={() => copyLink(map)}>
-                    Copy link
-                  </button>
-                </div>
+        <div className="side-col">
+          <aside className="card side-card">
+            <h4>Get to know your caterer</h4>
+            <div className="kv-l" style={{ marginTop: 0 }}>
+              Contact
+            </div>
+            <div>{c.contact_number}</div>
+            {c.email && <div>{c.email}</div>}
+            {c.address && (
+              <>
+                <div className="kv-l">Address</div>
+                <div>{c.address}</div>
+                {map && (
+                  <div className="small" style={{ marginTop: 4 }}>
+                    <a href={map} target="_blank" rel="noopener noreferrer">
+                      Open location in maps
+                    </a>{' '}
+                    ·{' '}
+                    <button type="button" className="lnk small" onClick={() => copyLink(map)}>
+                      Copy link
+                    </button>
+                  </div>
+                )}
+              </>
+            )}
+            <div className="kv-l">Service area</div>
+            <div>{area}</div>
+            <div className="kv-l">Event types</div>
+            <div>{c.event_types.join(' · ')}</div>
+            {(c.note || c.out_of_town) && (
+              <>
+                <div className="kv-l">Travel note</div>
+                <div>{c.note || 'Out-of-town events accepted. Ask about fees.'}</div>
+              </>
+            )}
+            <div className="kv-l">Capacity</div>
+            <div>
+              {c.min_guests}–{c.max_guests} guests
+            </div>
+          </aside>
+          <div className="card calcard mini" id="availability" style={{ scrollMarginTop: 90 }}>
+            <h4 style={{ fontSize: 20, fontWeight: 500, marginBottom: 14 }}>Availability</h4>
+            {av.data ? <AvailCalendar avail={av.data} value={date} onPick={setDate} /> : <p className="mut small">Loading…</p>}
+            <div style={{ marginTop: 16 }}>
+              {date ? (
+                <>
+                  <p className="small" style={{ margin: 0, fontWeight: 600, color: taken ? 'var(--rust)' : 'var(--sage-ink)' }}>
+                    {longDate(date)} · {taken ? st : 'Available for inquiry'}
+                  </p>
+                  {taken ? (
+                    <p className="tiny mut" style={{ margin: '6px 0 0' }}>Discuss an alternative date directly with the caterer.</p>
+                  ) : (
+                    <Link className="lnk small" to={inquire}>
+                      Ask about this date →
+                    </Link>
+                  )}
+                </>
+              ) : (
+                <p className="tiny mut" style={{ margin: 0 }}>Pick a date to check availability. It is not a reservation.</p>
               )}
-            </>
-          )}
-          <div className="kv-l">Service area</div>
-          <div>{area}</div>
-          <div className="kv-l">Event types</div>
-          <div>{c.event_types.join(' · ')}</div>
-          {(c.note || c.out_of_town) && (
-            <>
-              <div className="kv-l">Travel note</div>
-              <div>{c.note || 'Out-of-town events accepted. Ask about fees.'}</div>
-            </>
-          )}
-          <div className="kv-l">Capacity</div>
-          <div>
-            {c.min_guests}–{c.max_guests} guests
+            </div>
           </div>
-        </aside>
+        </div>
       </div>
-      <div id="availability" style={{ marginTop: 44, scrollMarginTop: 90 }}>
+      <div style={{ marginTop: 44 }}>
         <div style={{ marginTop: 24 }}>
           <Link className="lnk small" to={`/caterer/${c.caterer_id}/gallery`}>
-            View gallery and full calendar →
+            View full gallery →
           </Link>
         </div>
       </div>
