@@ -571,3 +571,10 @@ button.tag { cursor: pointer; }
 .kind input { position: absolute; opacity: 0; pointer-events: none; }
 .kind.on { border-color: var(--rust); background: var(--rust-t); }
 @media (max-width: 600px) { .kinds { grid-template-columns: 1fr; } }
+
+/* ---------- public package cards (photo cards) ---------- */
+a.ph { display: grid; }
+.pcard .bd .tag { margin-bottom: 2px; }
+.pcard h3 a { color: inherit; text-decoration: none; }
+.pcard .pdesc { margin: 8px 0 0; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.pcard .pgo { text-align: right; margin-top: 14px; font-weight: 600; }

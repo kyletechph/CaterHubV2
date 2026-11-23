@@ -156,22 +156,35 @@ export function Profile() {
               const list = ps.filter((p) => (p.package_type || 'catering') === kind);
               return list.length ? (
                 <div key={kind}>
-                  {new Set(ps.map((p) => p.package_type || 'catering')).size > 1 && <h3 className="h3" style={{ margin: '22px 0 12px' }}>{label}</h3>}
-                  <div className="pk-cards">
+                  {new Set(ps.map((p) => p.package_type || 'catering')).size > 1 && (
+                    <h3 className="h3" style={{ margin: '26px 0 12px' }}>
+                      {label}
+                    </h3>
+                  )}
+                  <div className="pcards">
                     {list.map((p) => (
-                      <div className="pk-card" key={p.package_id}>
-                  <h4>{p.name}</h4>
-                  {p.description && <p>{p.description}</p>}
-                  <div className="pr">{priceLabel(p)}</div>
-                  <div className="small">
-                    <span className="mut">
-                      {guestsLabel(p)} ·{' '}
-                    </span>
-                    <Link className="lnk" to={'/package/' + p.package_id + carry(q)}>
-                      View package →
-                    </Link>
-                  </div>
-                </div>
+                    <div className="pcard" key={p.package_id}>
+                      <Link className="ph" to={'/package/' + p.package_id + carry(q)}>
+                        {p.package_photos[0] ? <img src={p.package_photos[0].image_url} alt={p.name} /> : 'No photo yet'}
+                      </Link>
+                      <div className="bd">
+                        <span className="tag">{p.package_type === 'food' ? 'Food' : 'Catering'}</span>
+                        <h3>
+                          <Link to={'/package/' + p.package_id + carry(q)}>{p.name}</Link>
+                        </h3>
+                        <div className="pr">{priceLabel(p)}</div>
+                        <div className="small mut">
+                          {guestsLabel(p)}
+                          {p.is_customizable ? ' · Customizable' : ''}
+                        </div>
+                        {p.description && <p className="small mut pdesc">{p.description}</p>}
+                        <div className="pgo">
+                          <Link className="lnk" to={'/inquire/' + c.caterer_id + '?pkg=' + p.package_id}>
+                            Inquire →
+                          </Link>
+                        </div>
+                      </div>
+                    </div>
                     ))}
                   </div>
                 </div>
