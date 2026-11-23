@@ -2,9 +2,8 @@ import { useEffect, useRef, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { carry } from './CatererList';
 import { copyLink, mapUrl } from './mapLinks';
-import { BLOCKED, useAvail } from '../shared/AvailCalendar';
 import { Arrow, Bookmark } from '../shared/Icons';
-import { Empty, gate, guestsLabel, longDate, msg, ok, peso, priceLabel, today, useLoad } from '../shared/lib';
+import { Empty, gate, guestsLabel, msg, ok, peso, priceLabel, useLoad } from '../shared/lib';
 import { useAuth } from '../shared/AuthContext';
 import { COMPARE_MAX, useList } from '../shared/saved';
 import { sb } from '../shared/supabase';
@@ -40,7 +39,6 @@ export function Profile() {
   const { me } = useAuth();
   const q = Object.fromEntries(sp);
   const [cmp, toggleCmp] = useList('compare');
-  const [date, setDate] = useState(q.date || '');
   const [tab, setTab] = useState('overview');
   const s = useLoad(
     async () =>
@@ -53,7 +51,6 @@ export function Profile() {
       ),
     [id],
   );
-  const av = useAvail(id);
   const g = gate(s);
   if (g) return g;
   const c = s.data;
@@ -71,11 +68,10 @@ export function Profile() {
     photos = ps.flatMap((p) => p.package_photos.map((x) => x.image_url)),
     tiles = [c.cover_image && { src: c.cover_image }, c.logo && { src: c.logo, logo: true }, ...photos.map((src) => ({ src }))].filter(Boolean).slice(0, 2),
     inCmp = cmp.includes(c.caterer_id),
-    st = date ? av.data?.map?.[date] : null,
     map = mapUrl(c),
     area = c.service_areas.map((a) => a.area_name).join(', ') || 'Calbayog City',
     custom = ps.some((p) => p.is_customizable),
-    inquire = `/inquire/${c.caterer_id}${carry({ ...q, date })}`;
+    inquire = `/inquire/${c.caterer_id}${carry(q)}`;
   const goto = (t) => {
     setTab(t);
     document.getElementById(t)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -236,44 +232,7 @@ export function Profile() {
           </div>
         </aside>
       </div>
-      <div className="box sage" id="availability" style={{ marginTop: 44, padding: 28, scrollMarginTop: 90 }}>
-        <h2 className="h3" style={{ fontSize: 24 }}>
-          Have a date in mind?
-        </h2>
-        <p className="mut small" style={{ margin: '6px 0 0' }}>
-          Choose a date to check the caterer's current availability.
-        </p>
-        <div className="datebox">
-          <div>
-            <label className="l" style={{ fontSize: 12, fontWeight: 500 }}>
-              Event date
-            </label>
-            <input type="date" min={today()} value={date} onChange={(e) => setDate(e.target.value)} />
-          </div>
-          <div>
-            {date &&
-              (st && BLOCKED.includes(st) ? (
-                <span className="pill rust">{st}</span>
-              ) : (
-                <span className="pill sage">Available for inquiry</span>
-              ))}
-          </div>
-          <p className="tiny mut" style={{ margin: 0 }}>
-            Availability is not a reservation. Confirm all details directly.
-          </p>
-        </div>
-        {date && (
-          <p className="small" style={{ marginTop: 14, marginBottom: 0 }}>
-            {longDate(date)} ·{' '}
-            {st && BLOCKED.includes(st) ? (
-              <>Already {st}. Discuss an alternative date directly with the caterer.</>
-            ) : (
-              <Link className="lnk" to={inquire}>
-                Ask about this date →
-              </Link>
-            )}
-          </p>
-        )}
+      <div id="availability" style={{ marginTop: 44, scrollMarginTop: 90 }}>
         <div style={{ marginTop: 24 }}>
           <Link className="lnk small" to={`/caterer/${c.caterer_id}/gallery`}>
             View gallery and full calendar →
