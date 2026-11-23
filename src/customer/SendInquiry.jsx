@@ -3,9 +3,8 @@ import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../shared/AuthContext';
 import { AvailCalendar, BLOCKED, useAvail } from '../shared/AvailCalendar';
 import { Arrow } from '../shared/Icons';
-import { ALLERGIES, DIETARY, Empty, gate, guestsLabel, isFixed, msg, ok, peso, priceLabel, shortDay, today, totalFor, useLoad } from '../shared/lib';
+import { Empty, gate, guestsLabel, isFixed, msg, ok, peso, priceLabel, shortDay, today, totalFor, useLoad } from '../shared/lib';
 import { sb } from '../shared/supabase';
-const toggle = (list, v) => (list.includes(v) ? list.filter((x) => x !== v) : [...list, v]);
 export function Inquire() {
   const { id } = useParams(),
     [sp] = useSearchParams(),
@@ -18,8 +17,6 @@ export function Inquire() {
   const [pkg, setPkg] = useState(null);
   const [date, setDate] = useState(sp.get('date') || '');
   const [guests, setGuests] = useState(sp.get('guests') || '');
-  const [diet, setDiet] = useState((sp.get('diet') || '').split(',').filter(Boolean));
-  const [allergy, setAllergy] = useState([]);
   const [errs, setErrs] = useState([]);
   const [busy, setBusy] = useState(false);
   const av = useAvail(id);
@@ -75,18 +72,7 @@ export function Inquire() {
         budget: f.budget.trim(),
         message: f.message.trim(),
       };
-      let r = await sb.from('inquiries').insert({ ...row, dietary: diet, allergies: allergy }).select('ref').single();
-      // database not updated yet? keep the requests inside the message instead of losing them
-      if (r.error && /dietary|allergies/i.test(r.error.message || '')) {
-        const extra = [diet.length && `Dietary preferences: ${diet.join(', ')}`, allergy.length && `Allergy requirements: ${allergy.join(', ')}`]
-          .filter(Boolean)
-          .join('. ');
-        r = await sb
-          .from('inquiries')
-          .insert({ ...row, message: [row.message, extra].filter(Boolean).join('\n') })
-          .select('ref')
-          .single();
-      }
+      const r = await sb.from('inquiries').insert(row).select('ref').single();
       if (r.error) throw r.error;
       nav('/inquire/sent/' + r.data.ref);
     } catch (x) {
@@ -168,30 +154,6 @@ export function Inquire() {
               <textarea name="message" rows="4" placeholder="Tell us about menu preferences, setup, or dietary needs." />
             </div>
           </div>
-          <div className="field" style={{ marginTop: 6 }}>
-            <b className="small">Dietary preferences</b>
-            <div className="hint" style={{ marginBottom: 10 }}>
-              These are requests the caterer must confirm before finalizing your quote.
-            </div>
-            <div className="chips">
-              {DIETARY.map((d) => (
-                <button type="button" key={d} className={'chip' + (diet.includes(d) ? ' on' : '')} aria-pressed={diet.includes(d)} onClick={() => setDiet(toggle(diet, d))}>
-                  {d}
-                </button>
-              ))}
-            </div>
-          </div>
-          <div className="field">
-            <b className="small">Allergy requirements (optional)</b>
-            <div className="chips" style={{ margin: '10px 0 8px' }}>
-              {ALLERGIES.map((d) => (
-                <button type="button" key={d} className={'chip' + (allergy.includes(d) ? ' on' : '')} aria-pressed={allergy.includes(d)} onClick={() => setAllergy(toggle(allergy, d))}>
-                  {d}
-                </button>
-              ))}
-            </div>
-            <div className="hint">Allergen handling and cross-contact must be confirmed directly with the caterer before booking.</div>
-          </div>
           <p className="tiny mut">Your contact details are shared only with this caterer.</p>
           <div style={{ display: 'flex', alignItems: 'center', gap: 22 }}>
             <button className="btn" style={{ padding: '14px 28px' }} disabled={busy}>
@@ -235,7 +197,7 @@ export function Inquire() {
               <li>Finalize quotes and deposits directly.</li>
             </ol>
             <p className="tiny mut" style={{ marginTop: 20 }}>
-              Estimate, not a final quote. Optional extras are quoted separately. Dietary requests and allergy handling require caterer confirmation.
+              Estimate, not a final quote. Optional extras are quoted separately.
             </p>
             <details style={{ marginTop: 14 }}>
               <summary className="lnk small">Check the caterer's calendar</summary>
