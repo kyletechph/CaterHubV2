@@ -29,12 +29,14 @@ export const VerifiedBadge = ({ size = 22 }) => (
   </span>
 );
 
-function StarInput({ value, onChange }) {
+const WORDS = ['', 'Very dissatisfied', 'Dissatisfied', 'Okay', 'Satisfied', 'Very satisfied'];
+
+function StarInput({ value, onChange, size = 34, label = 'Your rating' }) {
   return (
-    <div className="stars big" role="radiogroup" aria-label="Your rating">
+    <div className="stars big" role="radiogroup" aria-label={label}>
       {[1, 2, 3, 4, 5].map((n) => (
         <button type="button" key={n} role="radio" aria-checked={value === n} aria-label={`${n} star${n > 1 ? 's' : ''}`} onClick={() => onChange(n)}>
-          <svg width="34" height="34" viewBox="0 0 24 24" className={n <= value ? 'on' : ''} aria-hidden="true">
+          <svg width={size} height={size} viewBox="0 0 24 24" className={n <= value ? 'on' : ''} aria-hidden="true">
             <path d={STAR} />
           </svg>
         </button>
@@ -52,6 +54,7 @@ export function Reviews({ c }) {
   const [n, setN] = useState(0);
   const [lastEvent, setLastEvent] = useState(null); // null = this customer never sent an inquiry here
   const [rating, setRating] = useState(0);
+  const [asp, setAsp] = useState({ food: 0, service: 0, value: 0 });
   const [files, setFiles] = useState([]);
 
   useEffect(() => {
@@ -100,6 +103,9 @@ export function Reviews({ c }) {
       caterer_id: id,
       user_id: me.id,
       rating,
+      food_rating: asp.food || null,
+      service_rating: asp.service || null,
+      value_rating: asp.value || null,
       comment: String(f.get('comment') || '').trim() || null,
       event_type: String(f.get('event') || '').trim() || null,
       photos,
@@ -110,6 +116,7 @@ export function Reviews({ c }) {
       throw new Error(r.error.code === '23505' ? 'You already reviewed this caterer.' : r.error.message);
     }
     setRating(0);
+    setAsp({ food: 0, service: 0, value: 0 });
     setFiles([]);
     e.target.reset();
     setN((x) => x + 1);
@@ -138,6 +145,22 @@ export function Reviews({ c }) {
         )}
       </div>
 
+      {rows.some((r) => r.photos?.length) && (
+        <div className="rev-strip">
+          <b className="small">Photos from customers</b>
+          <div className="rev-ph strip">
+            {rows
+              .flatMap((r) => r.photos || [])
+              .slice(0, 8)
+              .map((u) => (
+                <a key={u} href={u} target="_blank" rel="noreferrer">
+                  <img src={u} alt="Customer photo" loading="lazy" />
+                </a>
+              ))}
+          </div>
+        </div>
+      )}
+
       {rows.map((r) => (
         <article className="rev" key={r.review_id}>
           <div className="rev-h">
@@ -151,6 +174,17 @@ export function Reviews({ c }) {
             <span className="rev-date">{when(r.created_at)}</span>
           </div>
           <Stars value={r.rating} size={22} />
+          <p className="rev-l">
+            <span>Satisfaction:</span> {WORDS[r.rating]}
+          </p>
+          {[['food_rating', 'Food quality'], ['service_rating', 'Service'], ['value_rating', 'Value for money']].map(
+            ([k, l]) =>
+              r[k] > 0 && (
+                <p className="rev-l" key={k}>
+                  <span>{l}:</span> <Stars value={r[k]} size={16} />
+                </p>
+              ),
+          )}
           {r.event_type && (
             <p className="rev-l">
               <span>Event:</span> {r.event_type}
@@ -180,10 +214,19 @@ export function Reviews({ c }) {
 
       {canWrite && (
         <form className="card rev-form" onSubmit={submit}>
-          <h4>Rate {c.business_name}</h4>
+          <h4>How satisfied were you with {c.business_name}?</h4>
           <StarInput value={rating} onChange={setRating} />
+          <p className="small mut" style={{ margin: '-10px 0 16px' }}>
+            {WORDS[rating] || 'Tap a star to rate'}
+          </p>
+          {[['food', 'Food quality'], ['service', 'Service'], ['value', 'Value for money']].map(([k, l]) => (
+            <div className="rev-asp" key={k}>
+              <span>{l}</span>
+              <StarInput value={asp[k]} onChange={(v) => setAsp({ ...asp, [k]: v })} size={24} label={l} />
+            </div>
+          ))}
           <div className="field">
-            <label className="l">Your review</label>
+            <label className="l">Tell others about it</label>
             <textarea name="comment" rows="4" maxLength={1000} placeholder="How were the food and the service?" />
           </div>
           <div className="field">

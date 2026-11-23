@@ -281,22 +281,9 @@ export function Profile() {
         </div>
       </div>
       <h2 className="sec-t" id="gallery" style={{ scrollMarginTop: 90 }}>
-        Reviews &amp; event photos
+        Reviews &amp; photos
       </h2>
       <Reviews c={c} />
-      <div className="rv3">
-        <div className="card">
-          <h4>Event photos</h4>
-          <span className="pill sage" style={{ marginBottom: 12 }}>
-            Gallery
-          </span>
-          <p>Explore event setups and menu presentation in the gallery.</p>
-          <p>Gallery photos are not verified customer reviews.</p>
-          <Link className="lnk small" to={`/caterer/${c.caterer_id}/gallery`}>
-            Open gallery →
-          </Link>
-        </div>
-      </div>
     </div>
   );
 }

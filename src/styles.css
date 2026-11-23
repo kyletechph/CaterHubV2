@@ -578,3 +578,33 @@ a.ph { display: grid; }
 .pcard h3 a { color: inherit; text-decoration: none; }
 .pcard .pdesc { margin: 8px 0 0; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
 .pcard .pgo { text-align: right; margin-top: 14px; font-weight: 600; }
+
+/* ---------- reviews ---------- */
+.stars { display: inline-flex; gap: 2px; vertical-align: middle; }
+.stars svg { fill: #d9d4cc; }
+.stars svg.on { fill: #f5a623; }
+.stars.big { gap: 6px; margin: 8px 0 18px; }
+.stars.big button { background: none; border: 0; padding: 0; cursor: pointer; line-height: 0; }
+.reviews { margin-top: 18px; max-width: 860px; }
+.rev-sum { display: flex; align-items: center; gap: 12px; margin-bottom: 18px; }
+.rev-avg { font-size: 28px; font-weight: 600; }
+.rev { border-top: 1px solid var(--line); padding: 20px 0; }
+.rev-h { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
+.rev-h b { font-size: 18px; font-weight: 600; }
+.rev-av { width: 40px; height: 40px; border-radius: 50%; background: #dfe5e8; color: #7b8b94; display: grid; place-items: center; }
+.rev-date { margin-left: auto; color: var(--mut); font-size: 14px; }
+.rev-l { margin: 8px 0 0; font-size: 16px; color: #1d2a33; }
+.rev-l span { color: var(--mut); }
+.rev-ph { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 14px; max-width: 640px; }
+.rev-ph img { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 14px; display: block; }
+.rev .lnk { margin-top: 12px; }
+.rev-form { margin-top: 20px; max-width: 560px; }
+.rev-form h4 { font-size: 18px; font-weight: 600; margin: 0; }
+.vbadge { display: inline-flex; vertical-align: middle; margin-left: 10px; color: #1d8cf8; }
+.cc-body h3 .vbadge { margin-left: 6px; }
+@media (max-width: 600px) { .rev-ph { grid-template-columns: repeat(3, 1fr); gap: 8px; } }
+.rev-asp { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 4px; font-size: 15px; }
+.rev-asp .stars.big { margin: 0; gap: 4px; }
+.rev-strip { margin-bottom: 8px; }
+.rev-ph.strip { grid-template-columns: repeat(4, 1fr); max-width: 640px; margin-top: 10px; }
+.rev-ph.strip img { border-radius: 12px; }

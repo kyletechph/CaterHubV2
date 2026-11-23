@@ -76,6 +76,9 @@ create table if not exists reviews (
   created_at    timestamptz not null default now(),
   unique (caterer_id, user_id)
 );
+alter table reviews add column if not exists food_rating    int check (food_rating between 1 and 5);
+alter table reviews add column if not exists service_rating int check (service_rating between 1 and 5);
+alter table reviews add column if not exists value_rating   int check (value_rating between 1 and 5);
 alter table reviews enable row level security;
 
 -- show only a masked name, like j*****6
