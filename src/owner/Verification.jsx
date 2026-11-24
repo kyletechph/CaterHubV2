@@ -72,7 +72,7 @@ export function VerificationCard({ c, reload }) {
     );
     if (r.error) {
       if (/caterer_verification/i.test(r.error.message || '') && /(relation|schema cache)/i.test(r.error.message || ''))
-        throw new Error('Verification needs a database update. Run caterhub_reviews_verification_patch.sql in Supabase.');
+        throw new Error('Verification needs a database update. Run supabase/owner/06_verification.sql in Supabase.');
       throw r.error;
     }
     setFile(null);

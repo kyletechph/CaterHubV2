@@ -52,7 +52,7 @@ export function RespondInquiry() {
     if (!t) throw new Error('Please type your message.');
     const r = await sb.rpc('reply_as_caterer', { p_ref: i.ref, p_message: t });
     if (r.error) {
-      if ((r.error.message || '').includes('reply_as_caterer')) throw new Error('Chat is not set up yet. Run caterhub_owner_chat_patch.sql in Supabase.');
+      if ((r.error.message || '').includes('reply_as_caterer')) throw new Error('Chat is not set up yet. Run supabase/owner/02_chat_with_customer.sql in Supabase.');
       throw r.error;
     }
     e.target.reset();

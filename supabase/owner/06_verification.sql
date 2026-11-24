@@ -1,7 +1,9 @@
+-- OWNER: business verification.
 -- Run once in the Supabase SQL editor (safe to run again).
--- Adds: customer reviews (stars, text, photos) and business verification (private to the owner, badge is public).
+-- Owners submit their registration and permit details (private, behind a password in the app).
+-- The public only ever sees the verified badge (caterer_profiles.is_verified), which only an admin can switch on.
 
--- ============ 1) VERIFIED BADGE ============
+-- ============ 1) VERIFIED BADGE (shown to everyone) ============
 alter table caterer_profiles add column if not exists is_verified boolean not null default false;
 
 -- owners can never switch the badge on themselves; only an admin (or you, in the SQL editor) can

@@ -85,13 +85,12 @@ create trigger force_inquiry_ref before insert on inquiries
   for each row execute function public.force_inquiry_ref();
 
 -- 3) A profile can only be Published when its required details are filled in (same rules as the checklist
---    in the app; service areas are saved after the profile row, so they stay checked in the app only).
+--    in the app; the business description is optional, as in the app; service areas are saved after the profile row, so they stay checked in the app only).
 create or replace function public.enforce_publish_rules() returns trigger
 language plpgsql as $$
 begin
   if new.status = 'Published' and (
        coalesce(trim(new.business_name), '') = ''
-    or coalesce(trim(new.description), '') = ''
     or coalesce(trim(new.contact_number), '') = ''
     or coalesce(array_length(new.event_types, 1), 0) = 0
     or coalesce(new.max_guests, 0) <= 0

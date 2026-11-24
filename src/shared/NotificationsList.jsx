@@ -60,7 +60,7 @@ export function NotesBody({ owner = false }) {
       .eq('user_id', me.id)
       .select('notification_id');
     if (r.error) throw r.error;
-    if (!r.data.length) throw new Error('Could not clear. Run caterhub_safe_update.sql in Supabase first.');
+    if (!r.data.length) throw new Error('Could not clear. Run supabase/setup/2_safe_update.sql in Supabase first.');
     setPicked(new Set());
     s.reload();
     changed();
@@ -78,7 +78,7 @@ export function NotesBody({ owner = false }) {
       if (!t) throw new Error('Please type your reply.');
       const r = await sb.rpc('reply_to_inquiry', { p_ref: ref, p_message: t });
       if (r.error) {
-        if ((r.error.message || '').includes('reply_to_inquiry')) throw new Error('Replying is not set up yet. Run caterhub_safe_update.sql in Supabase.');
+        if ((r.error.message || '').includes('reply_to_inquiry')) throw new Error('Replying is not set up yet. Run supabase/setup/2_safe_update.sql in Supabase.');
         throw r.error;
       }
       msg('Reply sent to the caterer');

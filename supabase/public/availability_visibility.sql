@@ -1,3 +1,7 @@
+-- PUBLIC: what visitors (not logged in) and customers can see about a caterer's calendar.
+-- Already included in setup/2_safe_update.sql (section I), so you normally do NOT need to run this.
+-- Safe to run again if visitors cannot see Reserved / Unavailable dates.
+
 -- Run once in the Supabase SQL editor (safe to run again).
 -- I) Customers (and guests) can SEE a Published caterer's Reserved / Unavailable dates,
 --    and inquiries for those dates are refused

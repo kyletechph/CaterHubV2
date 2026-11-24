@@ -49,7 +49,7 @@ export function Availability() {
         ? await sb.from('caterer_day_notes').upsert({ caterer_id: c.caterer_id, day: pick, note })
         : await sb.from('caterer_day_notes').delete().eq('caterer_id', c.caterer_id).eq('day', pick);
       if (nr.error) throw nr.error;
-    } else if (note) msg('Date saved. Private notes need the database update (caterhub_safe_update.sql).', 1);
+    } else if (note) msg('Date saved. Private notes need the database update (supabase/setup/2_safe_update.sql).', 1);
     msg('Date saved');
     setSt(null);
     s.reload();

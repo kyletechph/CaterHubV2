@@ -112,7 +112,7 @@ export function Reviews({ c }) {
     });
     if (r.error) {
       if (/reviews/i.test(r.error.message || '') && /(relation|schema cache)/i.test(r.error.message || ''))
-        throw new Error('Reviews need a database update. Run caterhub_reviews_verification_patch.sql in Supabase.');
+        throw new Error('Reviews need a database update. Run supabase/customer/reviews.sql in Supabase.');
       throw new Error(r.error.code === '23505' ? 'You already reviewed this caterer.' : r.error.message);
     }
     setRating(0);

@@ -27,13 +27,7 @@ A caterer directory for Calbayog City. Customers browse caterers, compare packag
 ```bash
    npm install
 ```
-2. Create a [Supabase](https://supabase.com) project, open **SQL Editor** and run these files **in this order**:
-   1. `supabase/caterhub_schema.sql`
-   2. `supabase/caterhub_safe_update.sql`
-   3. `supabase/caterhub_owner_chat_patch.sql`
-   4. `supabase/caterhub_security_patch.sql` (always run this one last)
-
-   The other `.sql` files in the `supabase` folder are older patches that `supabase/caterhub_safe_update.sql` already includes. Do not re-run them: `supabase/set_inquiry_status.sql` contains an old insecure version of a function.
+2. Create a [Supabase](https://supabase.com) project, open **SQL Editor** and run the files in `supabase/` **in the order listed in [`supabase/README.md`](supabase/README.md)**. They are grouped by who they are for: `setup/` (everyone), `owner/`, `customer/`, `public/`, and `security/` (always run last). Do not run anything in `supabase/legacy/`.
 3. Copy `.env.example` to `.env` and fill in your project values (Supabase → Project Settings → API):
 ```
    VITE_SUPABASE_URL=https://YOUR-PROJECT.supabase.co

@@ -108,8 +108,8 @@ export function PackageEditor() {
       delete body.price_range;
       r = await write(body);
     }
-    if (r.error && /package_type/i.test(r.error.message || '')) throw new Error('Food packages need a database update. Run caterhub_package_type_patch.sql in Supabase, then save again.');
-    if (r.error && /price_type/i.test(r.error.message || '')) throw new Error('Fixed package pricing needs a database update. Run caterhub_package_pricing_patch.sql in Supabase, then save again.');
+    if (r.error && /package_type/i.test(r.error.message || '')) throw new Error('Food packages need a database update. Run supabase/owner/04_package_type.sql in Supabase, then save again.');
+    if (r.error && /price_type/i.test(r.error.message || '')) throw new Error('Fixed package pricing needs a database update. Run supabase/owner/03_package_pricing.sql in Supabase, then save again.');
     if (r.error) throw r.error;
     if (isNew && !pid) pid = r.data.package_id;
     if (menu) {
@@ -129,7 +129,7 @@ export function PackageEditor() {
       const d = await sb.from('package_photos').delete().in('photo_id', delPhotos);
       if (d.error) throw d.error;
     }
-    const noEvents = (err) => /event_type/i.test(err.message || '') && new Error('Photo events need a database update. Run caterhub_photo_events_patch.sql in Supabase, then save again.');
+    const noEvents = (err) => /event_type/i.test(err.message || '') && new Error('Photo events need a database update. Run supabase/owner/05_photo_events.sql in Supabase, then save again.');
     for (const [pid0, ch] of Object.entries(edits)) {
       if (delPhotos.includes(+pid0)) continue;
       const body = { caption: ch.caption || null };

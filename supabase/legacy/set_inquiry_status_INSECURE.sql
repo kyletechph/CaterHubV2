@@ -1,3 +1,5 @@
+-- DO NOT RUN. Old insecure version. The fixed version is in security/security_patch.sql.
+
 create or replace function public.set_inquiry_status(p_id bigint, p_status inquiry_status, p_message text default null)
 returns void
 language plpgsql
