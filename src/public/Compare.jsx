@@ -4,6 +4,7 @@ import { Arrow, Bookmark } from '../shared/Icons';
 import { COVERS, fromLabel, gate, guestsLabel, isFixed, ok, perGuest, peso, priceLabel, useLoad } from '../shared/lib';
 import { COMPARE_MAX, useList } from '../shared/saved';
 import { sb } from '../shared/supabase';
+import { isVerified } from '../shared/Reviews';
 export function Compare() {
   const [ids, toggle] = useList('compare');
   const [saved] = useList('saved');
@@ -197,7 +198,7 @@ export function Compare() {
               <div>Verification</div>
               {rows.map((c) => (
                 <div key={c.caterer_id}>
-                  {c.is_verified ? 'Verified business' : 'Not verified yet'}
+                  {isVerified(c) ? 'Verified (automatic check)' : 'Not verified yet'}
                 </div>
               ))}
             </div>

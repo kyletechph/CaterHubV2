@@ -8,7 +8,7 @@ import { Empty, gate, guestsLabel, longDate, msg, ok, peso, priceLabel, useLoad 
 import { useAuth } from '../shared/AuthContext';
 import { COMPARE_MAX, useList } from '../shared/saved';
 import { sb } from '../shared/supabase';
-import { Reviews, VerifiedBadge } from '../shared/Reviews';
+import { Reviews, VerifiedBadge, isVerified } from '../shared/Reviews';
 // shows the whole picture: wide photos fill the tile, logos and tall pictures are shown uncropped
 // over a blurred copy of themselves, so there are no white bars
 function Tile({ t }) {
@@ -106,7 +106,7 @@ export function Profile() {
         <div>
           <h1>
             {c.business_name}
-            {c.is_verified && <VerifiedBadge size={30} />}
+            {isVerified(c) && <VerifiedBadge size={30} />}
           </h1>
           <p className="sub" style={{ marginTop: 10 }}>
             {c.tagline || 'Local catering for your celebrations.'}

@@ -16,9 +16,12 @@ export const Stars = ({ value = 0, size = 18 }) => (
   </span>
 );
 
+// the badge only counts while the permit is still valid
+export const isVerified = (c) => !!c?.is_verified && (!c.verified_until || c.verified_until >= new Date().toISOString().slice(0, 10));
+
 // small seal with a check, shown next to the name of a verified caterer
 export const VerifiedBadge = ({ size = 22 }) => (
-  <span className="vbadge" title="Verified business" role="img" aria-label="Verified business">
+  <span className="vbadge" title="Verified business: registration and permit details passed CaterHub's automatic checks" role="img" aria-label="Verified business">
     <svg width={size} height={size} viewBox="0 0 24 24">
       <path
         fill="currentColor"
@@ -112,7 +115,7 @@ export function Reviews({ c }) {
     });
     if (r.error) {
       if (/reviews/i.test(r.error.message || '') && /(relation|schema cache)/i.test(r.error.message || ''))
-        throw new Error('Reviews need a database update. Run supabase/customer/reviews.sql in Supabase.');
+        throw new Error('Reviews need a database update. Run caterhub_reviews_verification_patch.sql in Supabase.');
       throw new Error(r.error.code === '23505' ? 'You already reviewed this caterer.' : r.error.message);
     }
     setRating(0);

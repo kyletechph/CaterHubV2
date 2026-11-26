@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { VerifiedBadge } from '../shared/Reviews';
+import { VerifiedBadge, isVerified } from '../shared/Reviews';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Arrow, Bookmark, Swap } from '../shared/Icons';
 import { COVERS, fromLabel, fromPrice, gate, perGuest, msg, ok, peso, shortDay, useLoad } from '../shared/lib';
@@ -263,7 +263,7 @@ export function List() {
                       <Link className="cat-link" to={'/caterer/' + c.caterer_id + carry(q)}>
                         {c.business_name}
                       </Link>
-                      {c.is_verified && <VerifiedBadge size={18} />}
+                      {isVerified(c) && <VerifiedBadge size={18} />}
                     </h3>
                     <div className="cc-loc">
                       {area}

@@ -620,3 +620,10 @@ a.ph { display: grid; }
 .mini .cd { min-height: 40px; padding: 6px 4px; font-size: 13px; align-items: center; justify-content: center; text-align: center; }
 .mini .cd small { display: none; }
 .mini .legend { gap: 12px; margin-top: 14px; }
+
+/* ---------- permit camera ---------- */
+.pcam { border: 1px dashed var(--line); border-radius: 12px; padding: 14px; background: #fff; }
+.pcam video, .pcam img { width: 100%; max-height: 340px; object-fit: contain; border-radius: 10px; background: #111; display: block; }
+.pcam img { background: #f4f1ec; }
+.pcam-bar { display: flex; gap: 10px; margin: 10px 0 4px; }
+.pcam-bar .btn { padding: 8px 16px; }
