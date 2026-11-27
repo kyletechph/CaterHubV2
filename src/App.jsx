@@ -3,6 +3,7 @@ import { AuthProvider, Guard } from './shared/AuthContext';
 import { configured } from './shared/supabase';
 import { Empty } from './shared/lib';
 import { Footer, Header } from './shared/Header';
+import Lightbox from './shared/Lightbox';
 import { Home } from './public/Home';
 import { List } from './public/CatererList';
 import { Profile } from './public/CatererProfile';
@@ -49,6 +50,7 @@ export default function App() {
   const cust = (el) => <Guard role="Customer">{el}</Guard>;
   return (
     <AuthProvider>
+      <Lightbox />
       {!workspace && <Header />}
       <Routes>
         <Route path="/" element={<Home />} />

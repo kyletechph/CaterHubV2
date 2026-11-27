@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Arrow, Bookmark } from '../shared/Icons';
-import { COVERS, fromLabel, gate, guestsLabel, isFixed, ok, perGuest, peso, priceLabel, useLoad } from '../shared/lib';
+import { COVERS, fromLabel, gate, guestsLabel, isFixed, ok, perGuest, peso, priceLabel, totalFor, useLoad } from '../shared/lib';
 import { COMPARE_MAX, useList } from '../shared/saved';
 import { sb } from '../shared/supabase';
 import { isVerified } from '../shared/Reviews';
@@ -26,7 +26,8 @@ export function Compare() {
   const info = (c) => {
     const act = c.catering_packages.filter((p) => p.is_active);
     const from = fromLabel(c);
-    return { act, from, custom: act.some((p) => p.is_customizable) };
+    const best = act.length ? act.reduce((m, p) => (totalFor(p, guests) < totalFor(m, guests) ? p : m)) : null;
+    return { act, from, best, custom: act.some((p) => p.is_customizable) };
   };
   const first = rows[0] && info(rows[0]);
   const pk = first && first.act.slice().sort((a, b) => perGuest(a) - perGuest(b))[0];
@@ -149,11 +150,18 @@ export function Compare() {
             <div className="r">
               <div className="hl">Starting estimate · {guests} guests</div>
               {rows.map((c) => {
-                const { from } = info(c);
+                const { best } = info(c);
+                const ok2 = best && guests > 0;
                 return (
                   <div className="hl" key={c.caterer_id}>
-                    <b className="big">{from ? `From ${peso(from * guests)}` : '—'}</b>
-                    <small>{from ? `${peso(from)} × ${guests} guests · not a final quote.` : 'Ask the caterer for a quote.'}</small>
+                    <b className="big">{ok2 ? `From ${peso(totalFor(best, guests))}` : '—'}</b>
+                    <small>
+                      {ok2
+                        ? isFixed(best)
+                          ? `${peso(best.price)} fixed package · not a final quote.`
+                          : `${peso(best.price)} × ${guests} guests · not a final quote.`
+                        : 'Ask the caterer for a quote.'}
+                    </small>
                   </div>
                 );
               })}
@@ -182,15 +190,6 @@ export function Compare() {
                 <div key={c.caterer_id}>
                   {c.service_areas.map((a) => a.area_name).join(', ') || 'Calbayog City'}
                   <small>{c.note || 'Travel and delivery fees: confirm with caterer.'}</small>
-                </div>
-              ))}
-            </div>
-            <div className="r">
-              <div>Dietary confirmation</div>
-              {rows.map((c) => (
-                <div key={c.caterer_id}>
-                  <span className="red">Not yet confirmed</span>
-                  <small>Confirm dietary requests and allergen handling.</small>
                 </div>
               ))}
             </div>
