@@ -5,6 +5,7 @@ import { AvailCalendar, BLOCKED, useAvail } from '../shared/AvailCalendar';
 import { Arrow } from '../shared/Icons';
 import { Empty, gate, guestsLabel, isFixed, msg, ok, peso, priceLabel, shortDay, today, totalFor, useLoad } from '../shared/lib';
 import { sb } from '../shared/supabase';
+import Combobox from '../shared/Combobox.jsx';
 export function Inquire() {
   const { id } = useParams(),
     [sp] = useSearchParams(),
@@ -114,12 +115,7 @@ export function Inquire() {
             </div>
             <div className="field">
               <label className="l">Event type *</label>
-              <input name="event_type" list="inq-events" placeholder="Type or pick an event" autoComplete="off" maxLength={60} defaultValue={sp.get('event') || ''} />
-              <datalist id="inq-events">
-                {ev.map((x) => (
-                  <option key={x} value={x} />
-                ))}
-              </datalist>
+              <Combobox name="event_type" options={ev} placeholder="Type or pick an event" maxLength={60} defaultValue={sp.get('event') || ''} />
             </div>
             <div className="field full">
               <label className="l">Event location *</label>

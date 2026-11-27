@@ -5,6 +5,7 @@ import { Arrow, Bookmark, Swap } from '../shared/Icons';
 import { COVERS, fromLabel, fromPrice, gate, perGuest, msg, ok, peso, shortDay, useLoad } from '../shared/lib';
 import { COMPARE_MAX, useList } from '../shared/saved';
 import { sb } from '../shared/supabase';
+import Combobox from '../shared/Combobox.jsx';
 export const BUDGETS = [
   ['', 'Any budget'],
   ['0-200', 'Up to ₱200 / guest'],
@@ -152,21 +153,11 @@ export function List() {
         <form className="filters bar" onSubmit={apply} key={sp.toString()} style={{ marginTop: 16 }}>
           <div className="field">
             <label className="l">Location</label>
-            <input name="area" list="dir-areas" defaultValue={loc} placeholder="Any location" autoComplete="off" />
-            <datalist id="dir-areas">
-              {areas.map((a) => (
-                <option key={a} value={a} />
-              ))}
-            </datalist>
+            <Combobox name="area" options={areas} defaultValue={loc} placeholder="Any location" />
           </div>
           <div className="field">
             <label className="l">Event type</label>
-            <input name="event" list="dir-events" defaultValue={q.event || ''} placeholder="Type or pick an event" autoComplete="off" />
-            <datalist id="dir-events">
-              {events.map((e) => (
-                <option key={e} value={e} />
-              ))}
-            </datalist>
+            <Combobox name="event" options={events} defaultValue={q.event || ''} placeholder="Type or pick an event" />
           </div>
           <div className="field">
             <label className="l">Budget per guest</label>
