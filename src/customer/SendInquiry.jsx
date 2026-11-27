@@ -56,7 +56,7 @@ export function Inquire() {
     if (!(n >= 1)) list.push('Guests: enter a positive whole number.');
     else if (p && (n < p.min_guests || n > p.max_guests)) list.push(`Guests: this package fits ${p.min_guests}–${p.max_guests} guests.`);
     setErrs(list);
-    if (list.length) return window.scrollTo({ top: 0, behavior: 'smooth' });
+    if (list.length) return;
     setBusy(true);
     try {
       const cu = ok(await sb.from('customers').select('customer_id').eq('user_id', me.id).maybeSingle());
@@ -93,13 +93,21 @@ export function Inquire() {
       </h1>
       <p className="sub">Share the details once. Your caterer will check your date and reply.</p>
       {errs.length > 0 && (
-        <div className="warn-b" role="alert" style={{ marginTop: 22 }}>
-          <b>Please check your event details</b>
-          {errs.map((x) => (
-            <div key={x} className="small">
-              {x}
+        <div className="modal-bg warn-pop" onClick={() => setErrs([])}>
+          <div className="modal warn-modal" role="alertdialog" aria-modal="true" aria-labelledby="warn-t" onClick={(e) => e.stopPropagation()}>
+            <div className="warn-ic" aria-hidden="true">!</div>
+            <h3 id="warn-t">Please check your event details</h3>
+            <ul>
+              {errs.map((x) => (
+                <li key={x}>{x}</li>
+              ))}
+            </ul>
+            <div className="acts">
+              <button type="button" className="btn" autoFocus onClick={() => setErrs([])}>
+                Got it
+              </button>
             </div>
-          ))}
+          </div>
         </div>
       )}
       <div className="inq" style={{ marginTop: 28 }}>
